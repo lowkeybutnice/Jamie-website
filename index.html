@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>A Question For You...</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tone.js for synthesized Sound Effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Font for the Game -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <!-- Font for the Website -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap'); /* Fun font for Catch Game */
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+
+        /* Background Hearts */
+        .heart-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            overflow: hidden;
+        }
+        .floating-heart {
+            position: absolute;
+            color: rgba(236, 72, 153, 0.2);
+            animation: float 15s infinite linear;
+        }
+        @keyframes float {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+        }
+
+        /* Game Specific Styles */
+        .game-font {
+            font-family: 'Press Start 2P', cursive;
+        }
+        .neon-text {
+            text-shadow: 2px 2px 0px #4c1d95, 0 0 10px #ec4899;
+        }
+        .game-container {
+            background-color: #1a0b1c;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-retro {
+            background: linear-gradient(180deg, #ec4899 0%, #be185d 100%);
+            border: none;
+            box-shadow: 0 4px 0 #831843;
+            transition: transform 0.1s, box-shadow 0.1s;
+            font-family: 'Press Start 2P', cursive;
+        }
+        .btn-retro:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #831843;
+        }
+        .touch-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(236, 72, 153, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        .touch-btn:active {
+            background: rgba(236, 72, 153, 0.4);
+        }
+
+        /* --- New Love Catch Styles --- */
+        .catch-font { font-family: 'Fredoka One', cursive; }
+        .catch-container { 
+            background: linear-gradient(to bottom, #e0f2fe, #f0f9ff); 
+            position: relative; 
+            overflow: hidden;
+            border-radius: 0.5rem;
+            box-shadow: inset 0 0 20px rgba(14, 165, 233, 0.1);
+        }
+        
+        /* Scrollbar for leaderboard */
+        #leaderboard-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        #leaderboard-list::-webkit-scrollbar-thumb {
+            background-color: #ec4899;
+            border-radius: 3px;
+        }
+        
+        /* Victory Medal Animation */
+        @keyframes shine {
+            0% { filter: drop-shadow(0 0 5px gold); transform: scale(1); }
+            50% { filter: drop-shadow(0 0 20px gold); transform: scale(1.1); }
+            100% { filter: drop-shadow(0 0 5px gold); transform: scale(1); }
+        }
+        .medal-shine {
+            animation: shine 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Background Decoration -->
+    <div class="heart-bg" id="bg-hearts"></div>
+
+    <!-- Main Card Container -->
+    <div id="main-card" class="bg-white rounded-3xl shadow-2xl p-6 md:p-8 max-w-md w-full text-center transform transition-all duration-500 border-4 border-pink-100 relative z-10">
+        
+        <!-- Header Decoration (Visible on Menu/Quiz/Results, Hidden on Game) -->
+        <div id="main-header" class="mb-6 flex justify-center">
+            <span class="text-6xl animate-bounce">💌</span>
+        </div>
+
+        <!-- Screen 1: Start Screen -->
+        <div id="start-screen" class="">
+            <h1 class="text-4xl font-bold text-pink-600 mb-4">Hey Shawty!</h1>
+            <p class="text-gray-600 text-lg mb-8">I have a few important questions for you...</p>
+            <div class="flex flex-col gap-3">
+                <button onclick="initAudioAndStart('quiz')" class="w-full bg-pink-500 text-white py-3 rounded-full font-bold text-xl shadow-lg transform transition-transform hover:scale-105 hover:bg-pink-600 focus:outline-none focus:ring-4 focus:ring-pink-300">
+                    Start Quiz
+                </button>
+                <button onclick="initAudioAndStart('game')" class="w-full bg-purple-900 text-white py-3 rounded-full font-bold text-xl shadow-lg transform transition-transform hover:scale-105 hover:bg-purple-800 focus:outline-none focus:ring-4 focus:ring-purple-500 border-2 border-purple-400">
+                    Play Love Invaders 👾
+                </button>
+                <button onclick="initAudioAndStart('catch')" class="w-full bg-sky-400 text-white py-3 rounded-full font-bold text-xl shadow-lg transform transition-transform hover:scale-105 hover:bg-sky-500 focus:outline-none focus:ring-4 focus:ring-sky-300 border-2 border-sky-200">
+                    Play Love Catch 🧺
+                </button>
+            </div>
+        </div>
+
+        <!-- Screen: LOVE INVADERS (The Game) -->
+        <div id="game-screen" class="hidden w-full">
+            <div class="game-container w-full h-[500px] rounded-lg border-2 border-pink-500 relative">
+                
+                <!-- Game UI Layer -->
+                <div class="absolute top-0 left-0 w-full p-2 flex justify-between z-10 pointer-events-none game-font">
+                    <div class="flex flex-col text-left">
+                        <span class="text-pink-400 text-[10px]">SCORE</span>
+                        <span id="scoreDisplay" class="text-white text-sm neon-text">0</span>
+                    </div>
+                    <div class="flex flex-col items-end">
+                        <span class="text-pink-400 text-[10px]">LEVEL</span>
+                        <span id="levelDisplay" class="text-yellow-400 text-sm neon-text">1</span>
+                    </div>
+                </div>
+
+                <!-- Lives & Boss HP -->
+                <div class="absolute top-2 left-1/2 transform -translate-x-1/2 z-10 flex flex-col items-center w-full">
+                    <div class="flex space-x-1" id="livesDisplay">
+                        <!-- Hearts injected via JS -->
+                    </div>
+                    <div id="bossHealthContainer" class="hidden mt-2 w-1/2 h-2 bg-gray-800 border border-red-500 relative">
+                         <div id="bossHealthBar" class="h-full bg-red-600 w-full transition-all duration-200"></div>
+                    </div>
+                </div>
+
+                <!-- Power Up Indicator -->
+                <div id="powerUpText" class="absolute top-12 left-1/2 transform -translate-x-1/2 text-[10px] text-cyan-300 game-font hidden animate-pulse z-10 text-center w-full">
+                    TRIPLE SHOT ACTIVE!
+                </div>
+
+                <!-- Canvas -->
+                <canvas id="invaderCanvas" class="block w-full h-full z-0"></canvas>
+
+                <!-- Start / Game Over / Victory Overlay -->
+                <div id="gameMenuModal" class="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300">
+                    <div class="p-4 text-center w-full">
+                        <h1 id="gameTitle" class="text-2xl text-pink-500 mb-4 neon-text game-font tracking-widest">LOVE<br>INVADERS</h1>
+                        
+                        <!-- START MENU -->
+                        <div id="gameStartContent">
+                            <p class="text-[10px] text-pink-200 mb-4 leading-relaxed game-font">
+                                ENEMIES DROP EVERY 25s.<br>BOSS AT LEVEL 5!
+                            </p>
+                            <button id="invaderStartBtn" class="btn-retro text-white text-xs py-3 px-6 rounded w-3/4 mb-3">
+                                START MISSION
+                            </button>
+                            <button onclick="exitGame()" class="text-gray-400 text-xs underline hover:text-white game-font">
+                                Exit to Menu
+                            </button>
+                        </div>
+
+                        <!-- GAME OVER MENU -->
+                        <div id="gameGameOverContent" class="hidden">
+                            <h2 id="gameOverTitle" class="text-xl text-red-500 mb-2 game-font">GAME OVER!</h2>
+                            <p class="text-xs text-gray-300 mb-4 game-font">Score: <span id="finalScore" class="text-white">0</span></p>
+                            
+                            <button id="invaderRestartBtn" class="btn-retro text-white text-xs py-3 px-6 rounded w-3/4 mb-3">
+                                TRY AGAIN
+                            </button>
+                            <div class="mt-2">
+                                <button onclick="exitGame()" class="text-gray-400 text-xs underline hover:text-white game-font">
+                                    Exit to Menu
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- VICTORY MENU -->
+                        <div id="gameVictoryContent" class="hidden">
+                            <h2 class="text-xl text-yellow-400 mb-2 game-font animate-bounce">VICTORY!</h2>
+                            <div class="text-6xl mb-4 medal-shine">💖</div>
+                            <p class="text-[10px] text-pink-200 mb-2 game-font">YOU DEFEATED THE BOSS!</p>
+                            <p class="text-xs text-gray-300 mb-4 game-font">Final Score: <span id="victoryScore" class="text-white">0</span></p>
+                            
+                            <button id="invaderVictoryBtn" class="btn-retro text-white text-xs py-3 px-6 rounded w-3/4 mb-3">
+                                PLAY AGAIN
+                            </button>
+                            <div class="mt-2">
+                                <button onclick="exitGame()" class="text-gray-400 text-xs underline hover:text-white game-font">
+                                    Exit to Menu
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Mobile Controls -->
+                <div id="mobileControls" class="absolute bottom-2 w-full px-2 flex justify-between z-30 md:hidden select-none touch-none">
+                    <div class="flex space-x-2">
+                        <button id="btnLeft" class="touch-btn w-12 h-12 rounded-full flex items-center justify-center text-white text-xl">←</button>
+                        <button id="btnRight" class="touch-btn w-12 h-12 rounded-full flex items-center justify-center text-white text-xl">→</button>
+                    </div>
+                    <button id="btnFire" class="touch-btn w-14 h-14 rounded-full flex items-center justify-center bg-pink-600/20 border-pink-500 text-2xl">💘</button>
+                </div>
+            </div>
+            
+            <p class="text-xs text-gray-400 mt-2 game-font text-center md:hidden">Tap buttons to play</p>
+            <p class="text-xs text-gray-400 mt-2 game-font text-center hidden md:block">Arrows to Move • Space to Shoot</p>
+        </div>
+
+        <!-- Screen: LOVE CATCH (New Game) -->
+        <div id="catch-screen" class="hidden w-full">
+             <div class="catch-container w-full h-[500px] border-4 border-sky-200 relative">
+                 <!-- UI Layer -->
+                 <div class="absolute top-2 left-2 right-2 flex justify-between z-10 pointer-events-none">
+                     <div class="bg-white/80 px-3 py-1 rounded-full text-sky-600 font-bold shadow-sm catch-font text-sm">Score: <span id="catchScore">0</span></div>
+                     <div class="flex space-x-1" id="catchLives"></div>
+                 </div>
+                 
+                 <!-- Speed Indicator -->
+                 <div id="speedIndicator" class="absolute top-10 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-white px-4 py-1 rounded-full text-xs font-bold shadow-md hidden catch-font animate-bounce z-20">
+                     SPEED UP! 🚀
+                 </div>
+
+                 <!-- Canvas -->
+                 <canvas id="catchCanvas" class="block w-full h-full z-0 cursor-move"></canvas>
+
+                 <!-- Overlays -->
+                 <div id="catchOverlay" class="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-30 backdrop-blur-sm">
+                     <h2 class="text-4xl text-sky-500 mb-2 catch-font drop-shadow-sm">Love Catch</h2>
+                     <p class="text-sky-700 mb-6 text-sm font-semibold">Drag the basket to catch hearts!</p>
+                     <button onclick="startCatchGame()" class="bg-sky-500 text-white py-3 px-8 rounded-full font-bold text-lg shadow-lg hover:bg-sky-600 hover:scale-105 transition-all catch-font">
+                         PLAY NOW
+                     </button>
+                     <button onclick="exitGame()" class="mt-4 text-sky-400 text-sm hover:underline font-semibold">Back to Menu</button>
+                 </div>
+
+                 <div id="catchGameOver" class="absolute inset-0 bg-black/50 flex flex-col items-center justify-center z-40 hidden backdrop-blur-sm">
+                     <h2 class="text-3xl text-white mb-2 catch-font">Oh no! 😢</h2>
+                     <p class="text-white mb-6 text-lg">Score: <span id="catchFinalScore">0</span></p>
+                     <button onclick="startCatchGame()" class="bg-green-500 text-white py-3 px-8 rounded-full font-bold text-lg shadow-lg hover:bg-green-600 hover:scale-105 transition-all catch-font">
+                         TRY AGAIN
+                     </button>
+                     <button onclick="exitGame()" class="mt-4 text-white text-sm hover:underline">Back to Menu</button>
+                 </div>
+             </div>
+             <p class="text-xs text-gray-400 mt-2 text-center">Use your finger/mouse to move the basket</p>
+        </div>
+
+        <!-- Screen 2: Question Screen -->
+        <div id="question-screen" class="hidden">
+            <div class="min-h-[150px] flex items-center justify-center">
+                 <h2 id="question-text" class="text-2xl font-semibold text-gray-800 mb-8"></h2>
+            </div>
+            <div class="flex gap-4">
+                <button id="yes-btn" class="flex-1 bg-green-500 text-white py-3 px-6 rounded-lg font-bold text-lg shadow-lg transform transition-transform hover:scale-105 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400">
+                    Yes
+                </button>
+                <button id="no-btn" class="flex-1 bg-purple-500 text-white py-3 px-6 rounded-lg font-bold text-lg shadow-lg transform transition-transform hover:scale-105 hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    No
+                </button>
+            </div>
+            <p id="funny-message" class="text-red-500 text-sm font-semibold mt-4 min-h-[2em] transition-all duration-300"></p>
+        </div>
+
+        <!-- Screen 3: Final "Yes" Screen -->
+        <div id="yes-screen" class="hidden">
+            <h1 class="text-4xl font-bold text-red-500 mb-4 animate-pulse">YAY!!! ❤️</h1>
+            <p class="text-gray-700 text-xl mb-6">You just made me the happiest person alive!</p>
+            <div class="text-8xl mb-6 animate-bounce">🌸</div>
+            <p class="text-pink-500 font-medium">I promise to be the best boyfriend ever.</p>
+            
+            <!-- Poem Button -->
+            <div class="mt-8">
+                <button id="poem-btn" class="bg-gradient-to-r from-pink-500 to-red-500 text-white py-3 px-8 rounded-full font-bold text-lg shadow-lg transform transition-transform hover:scale-105 hover:from-pink-600 hover:to-red-600">
+                    Read a Poem for You 📜
+                </button>
+            </div>
+
+            <!-- Poem Result Area -->
+            <div id="poem-display" class="hidden mt-6 p-4 bg-pink-50 rounded-lg text-gray-700 text-center whitespace-pre-wrap min-h-[50px] transition-all duration-300">
+                <h4 class="text-xl font-semibold mb-3">“Melody, My Heart’s Song”</h4>
+                <p class="text-lg italic">
+Brown eyes that whisper galaxies,
+<br>Soft fire dancing endlessly.
+<br>A smile that brings me calm,
+<br>Your laughter, our music, a healing balm.
+<br>
+<br>Brown skin glowing, kissed by sun,
+<br>Every shade perfection spun.
+<br>Curly crown, divine, untamed,
+<br>A goddess’ beauty not contained.
+<br>
+<br>When I asked, “Be mine,” the world stood still,
+<br>My heart surrendered, lost its will.
+<br>‘Cause you, sweet Melody, play my tune,
+<br>Every beat in sync, Jazz sounds beneath the moon
+<br>
+<br>An angel walked into my life,
+<br>Ended all the lonely strife.
+<br>Now you’re my verse, my sweetest art,
+<br>The only girl who’s stolen my heart.
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        // --- SHARED AUDIO SYSTEM ---
+        let audioInitialized = false;
+        let synth, polySynth, noiseSynth, explosionSynth;
+
+        async function initAudioAndStart(mode) {
+            if (!audioInitialized) {
+                await Tone.start();
+                
+                // --- QUIZ SOUNDS ---
+                synth = new Tone.Synth().toDestination();
+                polySynth = new Tone.PolySynth(Tone.Synth).toDestination();
+                
+                // --- GAME SOUNDS ---
+                noiseSynth = new Tone.PolySynth(Tone.Synth).toDestination(); // General FX
+                explosionSynth = new Tone.PolySynth(Tone.Synth, {
+                    envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 },
+                    oscillator: { type: 'sawtooth' }
+                }).toDestination(); // Custom crunchy sound for booms
+
+                // Volumes
+                synth.volume.value = -8;
+                polySynth.volume.value = -10;
+                noiseSynth.volume.value = -12;
+                explosionSynth.volume.value = -10;
+                
+                audioInitialized = true;
+            }
+
+            if (mode === 'quiz') startQuiz();
+            if (mode === 'game') openGameMenu();
+            if (mode === 'catch') openCatch();
+        }
+
+        function playSound(type) {
+            if (!audioInitialized) return;
+            const now = Tone.now(); 
+
+            switch(type) {
+                // Quiz Sounds
+                case 'yes': polySynth.triggerAttackRelease(["C4", "E4", "G4"], "8n"); break;
+                case 'no': synth.triggerAttackRelease("D2", "8n"); break;
+                case 'finale': polySynth.triggerAttackRelease(["C4", "E4", "G4", "C5", "E5"], "1n"); break;
+                
+                // Game Sounds
+                case 'shoot': synth.triggerAttackRelease("C5", "32n"); break; 
+                case 'hit': synth.triggerAttackRelease("G4", "64n"); break; 
+                
+                case 'explosion': explosionSynth.triggerAttackRelease("C2", "16n"); break; 
+                case 'bossHit': explosionSynth.triggerAttackRelease("G1", "32n"); break;
+                
+                case 'levelup': polySynth.triggerAttackRelease(["C5", "E5", "G5"], "4n"); break;
+                case 'playerHit': explosionSynth.triggerAttackRelease("A1", "8n"); break;
+                case 'gameover': polySynth.triggerAttackRelease(["A3", "F3", "D3", "A2"], "4n"); break;
+                case 'victory': polySynth.triggerAttackRelease(["C4", "E4", "G4", "C5", "G5", "C6"], "8n"); break; // VICTORY SOUND
+                
+                // Catch Game Sounds
+                case 'catch': synth.triggerAttackRelease("E5", "16n"); break; 
+                case 'powerup': polySynth.triggerAttackRelease(["G4", "C5", "E5"], "8n"); break; 
+                case 'miss': synth.triggerAttackRelease("G2", "8n"); break;
+            }
+        }
+
+
+        // --- BACKGROUND FLOATING HEARTS ---
+        const bgContainer = document.getElementById('bg-hearts');
+        const heartSymbols = ['❤️', '💖', '💜', '💕', '🌸'];
+        for (let i = 0; i < 15; i++) {
+            const heart = document.createElement('div');
+            heart.classList.add('floating-heart');
+            heart.textContent = heartSymbols[Math.floor(Math.random() * heartSymbols.length)];
+            heart.style.left = Math.random() * 100 + 'vw';
+            heart.style.fontSize = (Math.random() * 20 + 10) + 'px';
+            heart.style.animationDuration = (Math.random() * 10 + 10) + 's';
+            heart.style.animationDelay = (Math.random() * 5) + 's';
+            bgContainer.appendChild(heart);
+        }
+
+
+        // --- QUIZ APP LOGIC ---
+        const questions = [
+            "Is pineapple on pizza secretly amazing?",
+            "Do you believe in love at first sight?",
+            "Are you the cutest person in the world?",
+            "Is purple the best color?",
+            "Do you like random questions?",
+            "Do you believe in aliens (even just a little)?",
+            "Is a hotdog technically a sandwich?",
+            "Is it possible to have *too* many blankets?",
+            "Are cats secretly planning world domination?",
+            "Is 'binge-watching' a professional sport?",
+            "Is cereal a type of soup?",
+            "Do you ever think we're living in a simulation?",
+            "Is today a good day?",
+            "Is Anakin Skywalker the goat?",
+            "Is sliced bread the pinnacle of human engineering?",
+            "Catwoman is in the top 5 DC baddies?",
+            "Do you like surprises?",
+            "Is this silly quiz a fun way to spend a minute?",
+            "welllllllll, are you ready for something truly special?",
+            "You sure?",
+            "Wellllllllll Here goesssssssssss......",
+            "Will you please be my girlfriend?"
+        ];
+
+        const funnyMessages = [
+            "Hmm, that's not the right answer. Try again!",
+            "Error 404: 'Yes' button not found. Oh, wait, there it is!",
+            "Incorrect. Please review the material (me) and try again.",
+            "Was that a misclick? I'm sure you meant 'Yes'!",
+            "I think your 'No' button is broken... try the other one!",
+            "That's a funny way to spell 'Yes'!",
+            "Okay, okay, funny joke. Now click the real answer.",
+            "My calculations show a 100% chance you meant to click 'Yes'.",
+            "You do know I KNOW THAT YOU LOVE ME",
+            "DUDE BE SERIOUS, COME ON",
+            "Bruh.............",
+            "I dont have all day just click YES!!!!!!!!!!!!!"
+        ];
+        let lastMessageIndex = -3; 
+        let currentQuestionIndex = 0;
+
+        // DOM Elements
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const catchScreen = document.getElementById('catch-screen');
+        const questionScreen = document.getElementById('question-screen');
+        const yesScreen = document.getElementById('yes-screen');
+        const mainCard = document.getElementById('main-card');
+        const mainHeader = document.getElementById('main-header');
+        
+        const questionText = document.getElementById('question-text');
+        const yesBtn = document.getElementById('yes-btn');
+        const noBtn = document.getElementById('no-btn');
+        const funnyMessageText = document.getElementById('funny-message');
+        const poemBtn = document.getElementById('poem-btn');
+        const poemDisplay = document.getElementById('poem-display');
+
+        function showScreen(screen) {
+            [startScreen, gameScreen, catchScreen, questionScreen, yesScreen].forEach(s => s.classList.add('hidden'));
+            screen.classList.remove('hidden');
+            
+            // Hide Main Header when in game to save space and focus
+            if(screen === gameScreen) {
+                mainHeader.classList.add('hidden');
+                mainCard.classList.remove('bg-white', 'border-pink-100', 'shadow-2xl'); 
+                mainCard.classList.add('bg-transparent', 'border-none', 'shadow-none', 'p-0'); 
+            } else {
+                mainHeader.classList.remove('hidden');
+                mainCard.classList.add('bg-white', 'border-pink-100', 'shadow-2xl');
+                mainCard.classList.remove('bg-transparent', 'border-none', 'shadow-none', 'p-0');
+            }
+             // Stop any running game loops
+            if(screen !== catchScreen) cancelAnimationFrame(catchLoopId);
+        }
+
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentQuestionIndex < questions.length) {
+                questionText.textContent = questions[currentQuestionIndex];
+                funnyMessageText.textContent = ''; 
+                showScreen(questionScreen);
+            }
+        }
+
+        function handleAnswer(answer) {
+            funnyMessageText.textContent = '';
+            if (currentQuestionIndex === questions.length - 1) {
+                if (answer === 'yes') {
+                    playSound('finale');
+                    showScreen(yesScreen);
+                    startConfetti(5000); 
+                } else {
+                    playSound('no');
+                    let randomIndex = lastMessageIndex;
+                    if (funnyMessages.length > 1) { 
+                        while (randomIndex === lastMessageIndex) {
+                            randomIndex = Math.floor(Math.random() * funnyMessages.length);
+                        }
+                    } else { randomIndex = 0; }
+                    lastMessageIndex = randomIndex;
+                    funnyMessageText.textContent = funnyMessages[randomIndex];
+                }
+            } else {
+                if (answer === 'yes') {
+                    playSound('yes');
+                    startConfetti(500); 
+                } else {
+                    playSound('no');
+                }
+                currentQuestionIndex++;
+                loadQuestion();
+            }
+        }
+
+        yesBtn.addEventListener('click', () => handleAnswer('yes'));
+        noBtn.addEventListener('click', () => handleAnswer('no'));
+
+        poemBtn.addEventListener('click', () => {
+             playSound('yes');
+             poemDisplay.classList.remove('hidden');
+             poemBtn.classList.add('opacity-50', 'cursor-not-allowed');
+             poemBtn.disabled = true;
+        });
+
+        function startConfetti(duration = 5000) {
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+            const random = (min, max) => Math.random() * (max - min) + min;
+            const interval = setInterval(function() {
+                const timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(interval);
+                const particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: random(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: random(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+
+        // --- LOVE INVADERS GAME LOGIC ---
+
+        const canvas = document.getElementById('invaderCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let gameLoopId;
+        let lastTime = 0;
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let isGameOver = false;
+        let isPaused = true;
+        
+        // Entities
+        let particles = [];
+        let projectiles = []; 
+        let enemyProjectiles = [];
+        let enemies = [];
+        let powerUps = [];
+        let boss = null;
+        let player = { x: 0, y: 0, width: 30, height: 20, speed: 300, color: '#ec4899' };
+        
+        // Game State Vars
+        let activePowerUp = null; // 'TRIPLE', 'SPLIT', 'RAPID'
+        let powerUpTimer = 0;
+        let dropTimer = 0;
+        let dropInterval = 25; // Seconds between drops (Starts at 25)
+
+        // Inputs
+        const keys = { ArrowLeft: false, ArrowRight: false, Space: false };
+        let touchLeft = false;
+        let touchRight = false;
+        let lastShotTime = 0;
+        let shotCooldown = 400; 
+
+        function openGameMenu() {
+            showScreen(gameScreen);
+            resizeGame();
+            document.getElementById('gameMenuModal').classList.remove('hidden');
+            document.getElementById('gameMenuModal').style.opacity = '1';
+            document.getElementById('gameStartContent').classList.remove('hidden');
+            document.getElementById('gameGameOverContent').classList.add('hidden');
+            document.getElementById('gameVictoryContent').classList.add('hidden'); // Hidden
+            document.getElementById('bossHealthContainer').classList.add('hidden');
+            document.getElementById('powerUpText').classList.add('hidden');
+            isPaused = true;
+        }
+
+        function exitGame() {
+            isPaused = true;
+            cancelAnimationFrame(gameLoopId);
+            showScreen(startScreen);
+        }
+
+        function resizeGame() {
+            const container = document.querySelector('.game-container');
+            if(container && canvas) {
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+                if(player) player.y = canvas.height - 40;
+            }
+        }
+        window.addEventListener('resize', () => {
+            if(!gameScreen.classList.contains('hidden')) resizeGame();
+        });
+
+        class Invader {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.width = 20;
+                this.height = 20;
+                this.type = type;
+                this.markedForDeletion = false;
+                this.floatOffset = Math.random() * Math.PI * 2;
+            }
+            draw(ctx, frame) {
+                // Tiny hover effect, but NOT side to side movement across screen
+                const bob = Math.sin(frame * 0.05 + this.floatOffset) * 2; 
+                const colors = ['#f472b6', '#ec4899', '#db2777']; 
+                ctx.fillStyle = colors[this.type % 3];
+                const x = this.x;
+                const y = this.y + bob;
+                const s = this.width / 8;
+                // Pixel Heart
+                ctx.beginPath();
+                ctx.moveTo(x + 4*s, y + 2*s);
+                ctx.bezierCurveTo(x + 4*s, y, x, y, x, y + 3*s);
+                ctx.lineTo(x + 4*s, y + 7*s);
+                ctx.lineTo(x + 8*s, y + 3*s);
+                ctx.bezierCurveTo(x + 8*s, y, x + 4*s, y, x + 4*s, y + 2*s);
+                ctx.fill();
+            }
+        }
+
+        class Boss {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 80;
+                this.height = 70;
+                this.hp = 300;
+                this.maxHp = 300;
+                this.dir = 1;
+                this.shootTimer = 0;
+                this.state = 'IDLE'; // IDLE, FAN_ATTACK, RAIN_ATTACK, PULSE_ATTACK
+                this.stateTimer = 0;
+                this.powerUpDropTimer = Math.random() * 5 + 5; // 5-10 seconds
+                this.isHit = false;
+                this.hitTimer = 0;
+            }
+            update(dt) {
+                // Hit flash logic
+                if (this.isHit) {
+                    this.hitTimer += dt;
+                    if (this.hitTimer > 0.1) {
+                        this.isHit = false;
+                        this.hitTimer = 0;
+                    }
+                }
+
+                // Boss moves side to side
+                this.x += this.dir * 40 * dt;
+                if (this.x <= 20 || this.x + this.width >= canvas.width - 20) this.dir *= -1;
+
+                // Powerup Drop Logic
+                this.powerUpDropTimer -= dt;
+                if (this.powerUpDropTimer <= 0) {
+                    const r = Math.random();
+                    let type = 'TRIPLE';
+                    if (r < 0.33) type = 'SPLIT';
+                    else if (r < 0.66) type = 'RAPID';
+                    powerUps.push(new PowerUp(this.x + this.width / 2, this.y + this.height, type));
+                    this.powerUpDropTimer = Math.random() * 5 + 8; // Reset timer
+                }
+
+                // Ultimate Attack Logic
+                this.stateTimer += dt;
+                if (this.stateTimer > 4) {
+                    // Switch attack pattern every 4 seconds
+                    const rand = Math.random();
+                    if (rand < 0.3) this.state = 'FAN_ATTACK';
+                    else if (rand < 0.6) this.state = 'RAIN_ATTACK';
+                    else if (rand < 0.85) this.state = 'PULSE_ATTACK';
+                    else this.state = 'IDLE';
+                    this.stateTimer = 0;
+                }
+
+                this.shootTimer += dt;
+                if (this.state === 'FAN_ATTACK' && this.shootTimer > 0.8) {
+                    // Fan of 5 bullets
+                    for(let i = -2; i <= 2; i++) {
+                        enemyProjectiles.push(new Bullet(this.x + this.width/2, this.y + this.height, 150, '#ef4444', true, i * 60));
+                    }
+                    this.shootTimer = 0;
+                } else if (this.state === 'RAIN_ATTACK' && this.shootTimer > 0.2) {
+                    // Fast single shots
+                    enemyProjectiles.push(new Bullet(this.x + Math.random()*this.width, this.y + this.height, 250, '#ef4444', true));
+                    this.shootTimer = 0;
+                } else if (this.state === 'PULSE_ATTACK' && this.shootTimer > 2.0) {
+                    // 8-directional pulse
+                    const speed = 120;
+                    for(let i = 0; i < 8; i++) {
+                        const angle = (Math.PI / 4) * i; // 45 degrees * i
+                        const velX = Math.cos(angle) * speed;
+                        const velY = Math.sin(angle) * speed;
+                        enemyProjectiles.push(new Bullet(this.x + this.width/2, this.y + this.height/2, velY, '#fde047', true, velX));
+                    }
+                    this.shootTimer = 0;
+                } else if (this.state === 'IDLE' && this.shootTimer > 1.2) {
+                    enemyProjectiles.push(new Bullet(this.x + this.width/2, this.y + this.height, 200, '#ef4444', true));
+                    this.shootTimer = 0;
+                }
+            }
+            draw(ctx) {
+                ctx.fillStyle = this.isHit ? '#ffffff' : '#be123c';
+                const x = this.x;
+                const y = this.y;
+                // Big Heart Boss
+                ctx.beginPath();
+                ctx.moveTo(x + 40, y + 20);
+                ctx.bezierCurveTo(x + 40, y - 10, x, y - 10, x, y + 30);
+                ctx.lineTo(x + 40, y + 70);
+                ctx.lineTo(x + 80, y + 30);
+                ctx.bezierCurveTo(x + 80, y - 10, x + 40, y - 10, x + 40, y + 20);
+                ctx.fill();
+                // Angry Eyes
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(x + 20, y + 25, 15, 15);
+                ctx.fillRect(x + 50, y + 25, 15, 15);
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x+15, y+20); ctx.lineTo(x+35, y+30);
+                ctx.moveTo(x+70, y+20); ctx.lineTo(x+50, y+30);
+                ctx.stroke();
+                ctx.textAlign = 'left'; // Reset alignment
+            }
+        }
+
+        class Bullet {
+            constructor(x, y, velY, color, isEnemy = false, velX = 0) {
+                this.x = x;
+                this.y = y;
+                this.width = 4;
+                this.height = 10;
+                this.dy = velY;
+                this.dx = velX; 
+                this.color = color;
+                this.markedForDeletion = false;
+                this.isEnemy = isEnemy;
+            }
+            update(dt) {
+                this.y += this.dy * dt;
+                this.x += this.dx * dt;
+                if (this.y < 0 || this.y > canvas.height || this.x < 0 || this.x > canvas.width) this.markedForDeletion = true;
+            }
+            draw(ctx) {
+                ctx.fillStyle = this.color;
+                if (!this.isEnemy) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x - 3, this.y + 6);
+                    ctx.lineTo(this.x, this.y + 4);
+                    ctx.lineTo(this.x + 3, this.y + 6);
+                    ctx.fill();
+                } else {
+                    ctx.fillRect(this.x - 2, this.y, 4, 8);
+                }
+            }
+        }
+
+        class PowerUp {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type; 
+                this.dy = 80;
+                this.markedForDeletion = false;
+                this.width = 16;
+                this.height = 16;
+            }
+            update(dt) {
+                this.y += this.dy * dt;
+                if (this.y > canvas.height) this.markedForDeletion = true;
+            }
+            draw(ctx) {
+                if (this.type === 'TRIPLE') ctx.fillStyle = '#06b6d4'; // Cyan
+                else if (this.type === 'SPLIT') ctx.fillStyle = '#eab308'; // Yellow
+                else ctx.fillStyle = '#10b981'; // Green (Rapid)
+                
+                ctx.beginPath();
+                ctx.arc(this.x + 8, this.y + 8, 8, 0, Math.PI*2);
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.fillStyle = '#fff';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                const letter = this.type === 'TRIPLE' ? 'T' : (this.type === 'SPLIT' ? 'S' : 'R');
+                ctx.fillText(letter, this.x + 8, this.y + 12);
+                ctx.textAlign = 'left'; // Reset alignment
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 100 + 50;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.life = 1.0;
+                this.decay = Math.random() * 2 + 1;
+            }
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+                this.life -= this.decay * dt;
+            }
+            draw(ctx) {
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, 3, 3);
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function spawnEnemies() {
+            enemies = [];
+            // Static Block layout
+            const rows = 3 + Math.min(level, 2);
+            const cols = 7;
+            const startX = (canvas.width - (cols * 30)) / 2;
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    enemies.push(new Invader(startX + c * 30, 50 + r * 30, r));
+                }
+            }
+        }
+
+        function resetGame() {
+            resizeGame();
+            score = 0;
+            lives = 3;
+            level = 1;
+            particles = [];
+            projectiles = [];
+            enemyProjectiles = [];
+            powerUps = [];
+            boss = null;
+            activePowerUp = null;
+            dropTimer = 0;
+            dropInterval = 25; 
+            shotCooldown = 400; // Reset shot cooldown
+            player.x = canvas.width / 2;
+            
+            document.getElementById('bossHealthContainer').classList.add('hidden');
+            spawnEnemies();
+            updateScoreUI();
+            updateLivesUI();
+            updateLevelUI();
+            isGameOver = false;
+            isPaused = false;
+            lastTime = performance.now();
+            requestAnimationFrame(invaderGameLoop);
+        }
+
+        function playerShoot() {
+            const now = Date.now();
+            // Check Rapid Fire
+            const cooldown = activePowerUp === 'RAPID' ? 150 : shotCooldown;
+            
+            if (now - lastShotTime > cooldown) {
+                if (activePowerUp === 'TRIPLE') {
+                    projectiles.push(new Bullet(player.x + player.width/2, player.y, -400, '#06b6d4'));
+                    projectiles.push(new Bullet(player.x + player.width/2 - 15, player.y, -400, '#06b6d4'));
+                    projectiles.push(new Bullet(player.x + player.width/2 + 15, player.y, -400, '#06b6d4'));
+                } else if (activePowerUp === 'SPLIT') {
+                    projectiles.push(new Bullet(player.x + player.width/2, player.y, -400, '#eab308'));
+                    projectiles.push(new Bullet(player.x + player.width/2, player.y, -350, '#eab308', false, -100));
+                    projectiles.push(new Bullet(player.x + player.width/2, player.y, -350, '#eab308', false, 100));
+                } else {
+                    // Normal or Rapid (Green)
+                    const color = activePowerUp === 'RAPID' ? '#10b981' : '#60a5fa';
+                    projectiles.push(new Bullet(player.x + player.width/2, player.y, -400, color));
+                }
+                playSound('shoot');
+                lastShotTime = now;
+            }
+        }
+
+        function update(dt) {
+            // Defensive check for null arrays
+            if (!enemies) enemies = [];
+            if (!projectiles) projectiles = [];
+            if (!enemyProjectiles) enemyProjectiles = [];
+            if (!powerUps) powerUps = [];
+            if (!particles) particles = [];
+
+            // Player Move
+            if ((keys.ArrowLeft || touchLeft) && player.x > 0) player.x -= player.speed * dt;
+            if ((keys.ArrowRight || touchRight) && player.x < canvas.width - player.width) player.x += player.speed * dt;
+            if (keys.Space) playerShoot();
+
+            // Powerup Timer
+            if (activePowerUp) {
+                powerUpTimer -= dt;
+                if (powerUpTimer <= 0) {
+                    activePowerUp = null;
+                    shotCooldown = 400; // Reset cooldown
+                    document.getElementById('powerUpText').classList.add('hidden');
+                }
+            }
+
+            // Boss Logic (Level 5)
+            if (level === 5 && !boss) {
+                boss = new Boss(canvas.width/2 - 40, 50);
+                enemies = []; // Clear minions
+                document.getElementById('bossHealthContainer').classList.remove('hidden');
+            }
+
+            if (boss) {
+                boss.update(dt);
+                // Check Boss Collision
+                projectiles.forEach(p => {
+                    if (!p) return; // Defensive check
+                    if (!p.markedForDeletion && 
+                        p.x < boss.x + boss.width && p.x + p.width > boss.x &&
+                        p.y < boss.y + boss.height && p.y + p.height > boss.y) {
+                        
+                        p.markedForDeletion = true;
+                        boss.hp -= 2; 
+                        boss.isHit = true;
+                        boss.hitTimer = 0;
+                        playSound('bossHit');
+                        
+                        // Update HP Bar
+                        const pct = Math.max(0, (boss.hp / boss.maxHp) * 100);
+                        document.getElementById('bossHealthBar').style.width = pct + '%';
+
+                        if (boss.hp <= 0) {
+                            score += 5000;
+                            boss = null;
+                            document.getElementById('bossHealthContainer').classList.add('hidden');
+                            winGame();
+                        }
+                    }
+                });
+            } else {
+                // Standard Invader Logic
+                // Drop Timer
+                dropTimer += dt;
+                if (dropTimer >= dropInterval) {
+                    enemies.forEach(e => { if(e) e.y += 20; }); // Drop down
+                    dropTimer = 0;
+                }
+
+                // Enemy Shooting
+                if (Math.random() < 0.005 * level && enemies.length > 0) {
+                    const shooter = enemies[Math.floor(Math.random() * enemies.length)];
+                    if (shooter) {
+                        enemyProjectiles.push(new Bullet(shooter.x + shooter.width/2, shooter.y + shooter.height, 200, '#fb7185', true));
+                    }
+                }
+            }
+
+            // Entities Update
+            projectiles.forEach(p => { if(p) p.update(dt); });
+            enemyProjectiles.forEach(p => { if(p) p.update(dt); });
+            powerUps.forEach(p => { if(p) p.update(dt); });
+
+            projectiles = projectiles.filter(p => p && !p.markedForDeletion);
+            enemyProjectiles = enemyProjectiles.filter(p => p && !p.markedForDeletion);
+            powerUps = powerUps.filter(p => p && !p.markedForDeletion);
+            particles.forEach(p => { if(p) p.update(dt); });
+            particles = particles.filter(p => p && p.life > 0);
+
+            // Level Complete
+            if (enemies.length === 0 && !boss && level !== 5) {
+                level++;
+                playSound('levelup');
+                // Speed up drop interval each round
+                dropInterval = Math.max(5, 25 - (level * 3)); 
+                projectiles = [];
+                enemyProjectiles = [];
+                updateLevelUI();
+                spawnEnemies();
+            }
+
+            checkCollisions();
+            
+            // Game Over check (Invaders hit player level)
+            if (enemies) {
+                enemies.forEach(e => {
+                    if (e && e.y + e.height >= player.y) die();
+                });
+            }
+        }
+
+        function checkCollisions() {
+            if (!projectiles || !enemies) return;
+
+            // Player Bullets vs Enemies
+            projectiles.forEach(p => {
+                if (!p) return;
+                enemies.forEach(e => {
+                    if (!e) return;
+                    if (!p.markedForDeletion && !e.markedForDeletion &&
+                        p.x < e.x + e.width && p.x + p.width > e.x &&
+                        p.y < e.y + e.height && p.y + p.height > e.y) {
+                        e.markedForDeletion = true;
+                        p.markedForDeletion = true;
+                        for(let i=0; i<5; i++) particles.push(new Particle(e.x, e.y, '#ec4899'));
+                        playSound('explosion');
+                        score += 10 * level;
+                        updateScoreUI();
+
+                        // Chance for PowerUp
+                        if (Math.random() < 0.08) { // 8% Chance
+                            const r = Math.random();
+                            let type = 'TRIPLE';
+                            if (r < 0.33) type = 'SPLIT';
+                            else if (r < 0.66) type = 'RAPID';
+                            powerUps.push(new PowerUp(e.x, e.y, type));
+                        }
+                    }
+                });
+            });
+
+            // Powerups vs Player
+            if (powerUps) {
+                powerUps.forEach(p => {
+                    if (!p) return;
+                    if (!p.markedForDeletion && 
+                        p.x < player.x + player.width && p.x + p.width > player.x &&
+                        p.y < player.y + player.height && p.y + p.height > player.y) {
+                        
+                        p.markedForDeletion = true;
+                        playSound('powerup');
+                        activePowerUp = p.type;
+                        if (p.type === 'RAPID') shotCooldown = 150;
+                        else shotCooldown = 400;
+                        powerUpTimer = 10.0; 
+                        const txt = document.getElementById('powerUpText');
+                        txt.innerText = p.type + " SHOT ACTIVE!";
+                        txt.classList.remove('hidden');
+                    }
+                });
+            }
+
+            // Enemy Bullets vs Player
+            if (enemyProjectiles) {
+                enemyProjectiles.forEach(p => {
+                    if (!p) return;
+                    if (!p.markedForDeletion &&
+                        p.x < player.x + player.width && p.x + p.width > player.x &&
+                        p.y < player.y + player.height && p.y + p.height > player.y) {
+                        p.markedForDeletion = true;
+                        lives--;
+                        updateLivesUI();
+                        playSound('playerHit');
+                        if (lives <= 0) die();
+                    }
+                });
+            }
+            
+            if (enemies) enemies = enemies.filter(e => e && !e.markedForDeletion);
+        }
+
+        function winGame() {
+            isGameOver = true;
+            isPaused = true;
+            playSound('victory');
+            document.getElementById('gameMenuModal').classList.remove('hidden');
+            document.getElementById('gameStartContent').classList.add('hidden');
+            document.getElementById('gameGameOverContent').classList.add('hidden');
+            document.getElementById('gameVictoryContent').classList.remove('hidden');
+            document.getElementById('victoryScore').innerText = score;
+        }
+
+        function die() {
+            isGameOver = true;
+            isPaused = true;
+            playSound('gameover');
+            document.getElementById('gameMenuModal').classList.remove('hidden');
+            document.getElementById('gameStartContent').classList.add('hidden');
+            document.getElementById('gameGameOverContent').classList.remove('hidden');
+            document.getElementById('gameVictoryContent').classList.add('hidden');
+            document.getElementById('gameOverTitle').innerText = "GAME OVER!";
+            document.getElementById('finalScore').innerText = score;
+        }
+
+        function draw(frame) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Player
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.moveTo(player.x + player.width/2, player.y);
+            ctx.lineTo(player.x + player.width, player.y + player.height);
+            ctx.lineTo(player.x + player.width/2, player.y + player.height - 5);
+            ctx.lineTo(player.x, player.y + player.height);
+            ctx.fill();
+
+            if (enemies) enemies.forEach(e => { if(e) e.draw(ctx, frame); });
+            if(boss) boss.draw(ctx);
+            if (projectiles) projectiles.forEach(p => { if(p) p.draw(ctx); });
+            if (enemyProjectiles) enemyProjectiles.forEach(p => { if(p) p.draw(ctx); });
+            if (powerUps) powerUps.forEach(p => { if(p) p.draw(ctx); });
+            if (particles) particles.forEach(p => { if(p) p.draw(ctx); });
+        }
+
+        let globalFrame = 0;
+        function invaderGameLoop(timestamp) {
+            if (isPaused) return;
+            const dt = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+            globalFrame++;
+            update(dt);
+            draw(globalFrame);
+            if (!isGameOver) gameLoopId = requestAnimationFrame(invaderGameLoop);
+        }
+
+        function updateScoreUI() { document.getElementById('scoreDisplay').innerText = score; }
+        function updateLevelUI() { document.getElementById('levelDisplay').innerText = level; }
+        function updateLivesUI() {
+            const div = document.getElementById('livesDisplay');
+            div.innerHTML = '';
+            for(let i=0; i<lives; i++) {
+                const heart = document.createElement('span');
+                heart.innerText = '❤️';
+                heart.className = 'text-xs';
+                div.appendChild(heart);
+            }
+        }
+
+        // Controls Events
+        window.addEventListener('keydown', e => {
+            if (e.code in keys) keys[e.code] = true;
+            if (e.code === 'Space' && !isPaused && !gameScreen.classList.contains('hidden')) e.preventDefault();
+        });
+        window.addEventListener('keyup', e => { if (e.code in keys) keys[e.code] = false; });
+
+        const btnLeft = document.getElementById('btnLeft');
+        const btnRight = document.getElementById('btnRight');
+        const btnFire = document.getElementById('btnFire');
+
+        btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); touchLeft = true; });
+        btnLeft.addEventListener('touchend', (e) => { e.preventDefault(); touchLeft = false; });
+        btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); touchRight = true; });
+        btnRight.addEventListener('touchend', (e) => { e.preventDefault(); touchRight = false; });
+        btnFire.addEventListener('touchstart', (e) => { e.preventDefault(); playerShoot(); });
+        
+        document.getElementById('invaderStartBtn').addEventListener('click', () => {
+            document.getElementById('gameMenuModal').classList.add('hidden');
+            resetGame();
+        });
+        
+        document.getElementById('invaderRestartBtn').addEventListener('click', () => {
+            document.getElementById('gameMenuModal').classList.add('hidden');
+            resetGame();
+        });
+        
+        document.getElementById('invaderVictoryBtn').addEventListener('click', () => {
+            document.getElementById('gameMenuModal').classList.add('hidden');
+            resetGame();
+        });
+
+        // --- LOVE CATCH GAME LOGIC ---
+        const catchCanvas = document.getElementById('catchCanvas');
+        const cctx = catchCanvas.getContext('2d');
+        let catchLoopId;
+        let cScore = 0, cLives = 5, cSpeed = 2;
+        let cBasket = { x: 0, y: 0, w: 70, h: 40 };
+        let cHearts = [], cFloatingTexts = [];
+        let cGameActive = false;
+        const cCompliments = ["Great Catch!", "Amazing!", "My Heart!", "So Fast!", "Lovely!", "Perfect!", "Cutie!", "Wow!"];
+
+        function openCatch() {
+            showScreen(catchScreen);
+            document.getElementById('catchOverlay').classList.remove('hidden');
+            document.getElementById('catchGameOver').classList.add('hidden');
+            resizeCatch();
+        }
+
+        function resizeCatch() {
+            catchCanvas.width = catchCanvas.clientWidth; catchCanvas.height = catchCanvas.clientHeight;
+            cBasket.y = catchCanvas.height - 60; cBasket.x = catchCanvas.width/2 - cBasket.w/2;
+        }
+
+        function startCatchGame() {
+            document.getElementById('catchOverlay').classList.add('hidden');
+            document.getElementById('catchGameOver').classList.add('hidden');
+            cScore = 0; cLives = 5; cSpeed = 2;
+            cHearts = []; cFloatingTexts = [];
+            cGameActive = true;
+            updateCatchUI();
+            catchGameLoop();
+        }
+
+        function catchGameLoop() {
+            if (!cGameActive) return;
+            cctx.clearRect(0, 0, catchCanvas.width, catchCanvas.height);
+
+            // Draw Basket (Woven Look)
+            const bx = cBasket.x, by = cBasket.y, bw = cBasket.w, bh = cBasket.h;
+            cctx.fillStyle = '#d97706'; 
+            cctx.beginPath();
+            cctx.moveTo(bx, by); cctx.lineTo(bx + bw, by);
+            cctx.lineTo(bx + bw - 10, by + bh); cctx.lineTo(bx + 10, by + bh);
+            cctx.closePath(); cctx.fill();
+            // Handle
+            cctx.strokeStyle = '#d97706'; cctx.lineWidth = 4;
+            cctx.beginPath(); cctx.arc(bx + bw/2, by, bw/2 - 5, Math.PI, 0); cctx.stroke();
+            // Detail
+            cctx.fillStyle = 'rgba(0,0,0,0.1)';
+            cctx.fillRect(bx + 5, by + 10, bw - 10, 2);
+            cctx.fillRect(bx + 10, by + 20, bw - 20, 2);
+
+            // Spawn Hearts
+            if (Math.random() < 0.003 + (cScore / 3500)) {
+                cHearts.push({
+                    x: Math.random() * (catchCanvas.width - 30),
+                    y: -30,
+                    size: 25,
+                    emoji: ['❤️', '💖', '💕', '💘'][Math.floor(Math.random() * 4)],
+                    speed: cSpeed + Math.random()
+                });
+            }
+
+            // Update Hearts
+            for (let i = 0; i < cHearts.length; i++) {
+                let h = cHearts[i];
+                h.y += h.speed;
+                cctx.font = `${h.size}px Arial`;
+                cctx.fillText(h.emoji, h.x, h.y);
+
+                // Caught?
+                if (h.y > cBasket.y - 10 && h.y < cBasket.y + cBasket.h && h.x > cBasket.x - 10 && h.x < cBasket.x + cBasket.w) {
+                    cHearts.splice(i, 1); i--; cScore++; playSound('catch');
+                    
+                    // Progression
+                    if(cScore % 5 === 0) spawnFloatingText(cBasket.x + cBasket.w/2, cBasket.y, cCompliments[Math.floor(Math.random()*cCompliments.length)]);
+                    if(cScore % 25 === 0) {
+                        cSpeed += 0.3; 
+                        playSound('powerup');
+                        const ind = document.getElementById('speedIndicator');
+                        ind.classList.remove('hidden');
+                        setTimeout(() => ind.classList.add('hidden'), 2000);
+                    }
+                    updateCatchUI();
+                    continue;
+                }
+                // Missed?
+                if (h.y > catchCanvas.height) {
+                    cHearts.splice(i, 1); i--; cLives--; playSound('miss');
+                    updateCatchUI();
+                    if(cLives <= 0) endCatchGame();
+                }
+            }
+
+            // Floating Text
+            for (let i = 0; i < cFloatingTexts.length; i++) {
+                let ft = cFloatingTexts[i];
+                ft.y -= 1; ft.life--;
+                cctx.fillStyle = `rgba(236, 72, 153, ${ft.life / 50})`;
+                cctx.font = "bold 18px 'Poppins'";
+                cctx.fillText(ft.text, ft.x - (cctx.measureText(ft.text).width/2), ft.y);
+                if(ft.life <= 0) { cFloatingTexts.splice(i, 1); i--; }
+            }
+
+            catchLoopId = requestAnimationFrame(catchGameLoop);
+        }
+
+        function spawnFloatingText(x, y, text) {
+            cFloatingTexts.push({x: x, y: y, text: text, life: 50});
+        }
+
+        function updateCatchUI() {
+            document.getElementById('catchScore').innerText = cScore;
+            document.getElementById('catchLives').innerHTML = '❤️'.repeat(cLives);
+        }
+
+        function endCatchGame() {
+            cGameActive = false; playSound('gameover');
+            document.getElementById('catchGameOver').classList.remove('hidden');
+            document.getElementById('catchFinalScore').innerText = cScore;
+        }
+
+        // Catch Input
+        function moveBasket(clientX) {
+            const rect = catchCanvas.getBoundingClientRect();
+            let x = clientX - rect.left;
+            cBasket.x = x - cBasket.w / 2;
+            if (cBasket.x < 0) cBasket.x = 0;
+            if (cBasket.x + cBasket.w > catchCanvas.width) cBasket.x = catchCanvas.width - cBasket.w;
+        }
+        catchCanvas.addEventListener('mousemove', e => { if(cGameActive) moveBasket(e.clientX); });
+        catchCanvas.addEventListener('touchmove', e => { if(cGameActive) { e.preventDefault(); moveBasket(e.touches[0].clientX); } }, {passive:false});
+
+    </script>
+</body>
+</html>
